@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>DivTracker</title>
+  <link rel="manifest" href="./manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --orange:#FF9500;--orange-soft:rgba(255,149,0,0.12);--orange-dark:#CC7700;
+      --bg:#F2F2F7;--card:#fff;--text:#1C1C1E;--text2:#636366;--text3:#AEAEB2;
+      --border:#E5E5EA;--success:#34C759;--danger:#FF3B30;--radius:14px;
+      --safe-bottom:env(safe-area-inset-bottom,0px);
+    }
+    body{font-family:'Plus Jakarta Sans',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+
+    /* ── TABS ── */
+    .tab-hdr{position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);display:flex;gap:4px;padding:8px 12px}
+    .tab-btn{flex:1;padding:7px 6px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:500;color:var(--text2);border-radius:18px;cursor:pointer;transition:all .2s;white-space:nowrap}
+    .tab-btn.active{background:var(--text);color:#fff;font-weight:600}
+
+    /* ── MAIN ── */
+    .main{padding-bottom:calc(68px + var(--safe-bottom));min-height:calc(100vh - 46px)}
+
+    /* ── HERO ── */
+    .hero{background:var(--card);padding:20px 18px 16px;margin-bottom:10px}
+    .hero-top{display:flex;align-items:flex-start;justify-content:space-between}
+    .hero-amt{font-family:'DM Mono',monospace;font-size:38px;font-weight:500;color:var(--text);line-height:1;margin-bottom:14px}
+    .hero-amt sup{font-size:20px;color:var(--text2);vertical-align:super;line-height:0}
+    .refresh-btn{background:none;border:none;padding:6px;cursor:pointer;color:var(--text3);line-height:0}
+    .refresh-btn svg{width:20px;height:20px}
+    .refresh-btn.spin svg{animation:spin .75s linear infinite}
+    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .hs{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:var(--bg);border-radius:10px}
+    .hs-l{font-size:11px;color:var(--text2)}
+    .hs-v{font-family:'DM Mono',monospace;font-size:13px;font-weight:500}
+    .hs-v.ora{color:var(--orange-dark)}
+
+    /* ── CHART ── */
+    .chart-sec{background:var(--card);padding:14px 16px;margin-bottom:10px}
+    .chart-years{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+    .chart-years::-webkit-scrollbar{display:none}
+    .ybtn{padding:5px 14px;border-radius:14px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s}
+    .ybtn.active{background:var(--orange);color:#fff}
+    .ybtn:not(.active){background:transparent;color:var(--orange)}
+
+    /* ── SECTION HDR ── */
+    .sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 6px}
+    .sec-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700}
+    .sec-btn{width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)}
+    .sec-btn svg{width:15px;height:15px}
+
+    /* ── HOLDINGS ── */
+    .holdings{background:var(--card);border-radius:var(--radius);margin:0 10px;overflow:hidden}
+    .h-item{display:flex;align-items:center;padding:13px 15px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+    .h-item:last-child{border-bottom:none}
+    .h-item:active{background:var(--bg)}
+    .h-logo{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:10px;font-weight:800;margin-right:11px;flex-shrink:0}
+    .h-info{flex:1;min-width:0}
+    .h-name{display:flex;align-items:baseline;gap:5px;margin-bottom:3px}
+    .h-ticker{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+    .h-fname{font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+    .h-meta{display:flex;align-items:center;gap:7px}
+    .h-shares{font-size:11px;color:var(--text3)}
+    .q-wrap{display:flex;gap:2px;align-items:center}
+    .q-bar{width:5px;height:11px;border-radius:2px;background:var(--border)}
+    .q-bar.on{background:var(--orange)}
+    .q-lbl{font-size:8px;color:var(--text3);margin-left:2px;letter-spacing:-.3px}
+    .h-right{text-align:right;flex-shrink:0;margin-left:8px}
+    .h-income{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;margin-bottom:3px}
+    .h-income.nodiv{font-size:11px;color:var(--text3)}
+    .h-yields{font-family:'DM Mono',monospace;font-size:10px;color:var(--text2)}
+
+    /* ── FAB ── */
+    .fab{position:fixed;bottom:calc(68px + var(--safe-bottom) + 14px);right:18px;width:54px;height:54px;border-radius:50%;background:var(--orange);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 18px rgba(255,149,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;transition:transform .12s,box-shadow .12s}
+    .fab:active{transform:scale(.95);box-shadow:0 2px 8px rgba(255,149,0,.4)}
+    .fab svg{width:22px;height:22px}
+
+    /* ── BOTTOM NAV ── */
+    .bnav{position:fixed;bottom:0;left:0;right:0;height:calc(58px + var(--safe-bottom));background:var(--card);border-top:1px solid var(--border);display:flex;align-items:flex-start;padding-top:6px;z-index:100}
+    .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px 0;border:none;background:none;cursor:pointer;color:var(--text3);font-family:inherit;font-size:10px;transition:color .15s}
+    .ni.active{color:var(--orange)}
+    .ni svg{width:22px;height:22px}
+
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+    .modal-overlay.open{opacity:1;pointer-events:all}
+    .modal{width:100%;background:var(--card);border-radius:20px 20px 0 0;padding:16px 20px calc(20px + var(--safe-bottom));transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:88vh;overflow-y:auto}
+    .modal-overlay.open .modal{transform:translateY(0)}
+    .modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
+    .modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:18px;text-align:center}
+
+    /* ── FORM ── */
+    .f-group{margin-bottom:14px}
+    .f-label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+    .f-input{width:100%;padding:13px 15px;border:1.5px solid var(--border);border-radius:12px;font-family:inherit;font-size:16px;color:var(--text);background:var(--card);outline:none;transition:border-color .2s;-webkit-appearance:none}
+    .f-input:focus{border-color:var(--orange)}
+    .f-input.mono{font-family:'DM Mono',monospace}
+    .f-input:disabled{background:var(--bg);color:var(--text2)}
+
+    /* ── BUTTONS ── */
+    .btn{width:100%;padding:15px;border-radius:13px;border:none;font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;transition:all .12s}
+    .btn:active{transform:scale(.98)}
+    .btn-primary{background:var(--orange);color:#fff}
+    .btn-danger{background:transparent;color:var(--danger);margin-top:6px}
+    .btn-ghost{background:transparent;color:var(--text2);margin-top:6px}
+
+    /* ── LOADING ── */
+    .loading-box{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px}
+    .spinner{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .75s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── EMPTY STATE ── */
+    .empty{text-align:center;padding:60px 30px}
+    .empty-ico{font-size:56px;margin-bottom:14px}
+    .empty-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px}
+    .empty-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:24px}
+
+    /* ── PORTFOLIO TAB ── */
+    .port-card{background:var(--card);border-radius:var(--radius);margin:10px 10px 0;padding:18px}
+    .port-total{font-family:'DM Mono',monospace;font-size:34px;font-weight:500}
+    .port-lbl{font-size:12px;color:var(--text2);margin-bottom:16px;margin-top:2px}
+    .port-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .port-stat{background:var(--bg);border-radius:11px;padding:13px}
+    .port-stat-lbl{font-size:11px;color:var(--text2);margin-bottom:5px}
+    .port-stat-val{font-family:'DM Mono',monospace;font-size:17px;font-weight:500}
+
+    /* ── SETTINGS ── */
+    .settings-card{background:var(--card);border-radius:var(--radius);margin:10px 10px 0;overflow:hidden}
+    .s-item{display:flex;align-items:center;padding:15px 16px;border-bottom:1px solid var(--border);cursor:pointer;gap:12px}
+    .s-item:last-child{border-bottom:none}
+    .s-ico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+    .s-text{flex:1}
+    .s-label{font-size:14px;font-weight:500}
+    .s-val{font-size:11px;color:var(--text2);margin-top:1px}
+    .chevron{color:var(--text3);font-size:18px}
+
+    /* ── PROGRESS BAR ── */
+    .progress-bar{height:3px;background:var(--border);border-radius:2px;margin:0 18px 10px;overflow:hidden}
+    .progress-fill{height:100%;background:var(--orange);border-radius:2px;width:0%;transition:width .3s}
+
+    /* ── TOAST ── */
+    .toast{position:fixed;bottom:calc(68px + var(--safe-bottom) + 16px);left:50%;transform:translateX(-50%) translateY(16px);background:var(--text);color:#fff;padding:9px 18px;border-radius:18px;font-size:13px;font-weight:500;opacity:0;transition:all .28s;z-index:300;white-space:nowrap;pointer-events:none}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    .last-upd{text-align:center;font-size:10px;color:var(--text3);padding:8px}
+    .divider{height:16px}
+
+    /* ── BADGE ── */
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-left:4px}
+    .badge-green{background:rgba(52,199,89,.12);color:#1a7a36}
+    .badge-red{background:rgba(255,59,48,.12);color:#cc2020}
+  </style>
+</head>
+<body>
+
+<div class="tab-hdr">
+  <button class="tab-btn active" onclick="setTab('dividends')">Dividendos</button>
+  <button class="tab-btn" onclick="setTab('portfolio')">Portafolio</button>
+  <button class="tab-btn" onclick="setTab('settings')">Ajustes</button>
+</div>
+
+<div class="main" id="main"></div>
+
+<button class="fab" id="fab" onclick="openAdd()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+</button>
+
+<nav class="bnav">
+  <button class="ni active" id="ni-0" onclick="setTab('dividends')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Dividendos
+  </button>
+  <button class="ni" id="ni-1" onclick="refreshData()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    Actualizar
+  </button>
+  <button class="ni" id="ni-2" onclick="setTab('portfolio')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Portafolio
+  </button>
+  <button class="ni" id="ni-3" onclick="setTab('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Ajustes
+  </button>
+</nav>
+
+<!-- Position Modal -->
+<div class="modal-overlay" id="posModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">Agregar posición</div>
+    <div class="f-group">
+      <label class="f-label">Ticker</label>
+      <input class="f-input mono" id="iTickr" placeholder="Ej: JEPI" autocomplete="off" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="f-group">
+      <label class="f-label">Número de acciones</label>
+      <input class="f-input mono" id="iShrs" type="number" placeholder="0" min="0" step="0.001">
+    </div>
+    <div class="f-group">
+      <label class="f-label">Precio promedio de compra (USD)</label>
+      <input class="f-input mono" id="iCost" type="number" placeholder="0.00" min="0" step="0.01">
+    </div>
+    <button class="btn btn-primary" onclick="doSave()">Guardar</button>
+    <button class="btn btn-danger" id="delBtn" onclick="doDelete()" style="display:none">Eliminar posición</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const S = {
+  tab: 'dividends',
+  refreshing: false,
+  data: null,
+  editTicker: null,
+  year: new Date().getFullYear(),
+  progress: 0,
+  total: 0
+};
+
+// Load cached data on start
+try { const c = localStorage.getItem('divCache'); if(c) S.data = JSON.parse(c); } catch(e){}
+
+// ═══════════════════════════════════════════
+// LOCAL STORAGE — POSITIONS
+// ═══════════════════════════════════════════
+function getPositions() {
+  try { return JSON.parse(localStorage.getItem('positions') || '[]'); } catch(e) { return []; }
+}
+function savePositionsLS(arr) {
+  localStorage.setItem('positions', JSON.stringify(arr));
+}
+function upsertPosition(pos) {
+  const arr = getPositions();
+  const i = arr.findIndex(p => p.ticker === pos.ticker);
+  if(i >= 0) arr[i] = pos; else arr.push(pos);
+  savePositionsLS(arr);
+}
+function removePosition(ticker) {
+  savePositionsLS(getPositions().filter(p => p.ticker !== ticker));
+}
+
+// ═══════════════════════════════════════════
+// YAHOO FINANCE VIA CORS PROXY
+// ═══════════════════════════════════════════
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
+
+function getYahooCache(ticker) {
+  try {
+    const c = JSON.parse(localStorage.getItem('yahooCache') || '{}');
+    const e = c[ticker];
+    if(e && (Date.now() - e.cachedAt) < CACHE_TTL) return e;
+  } catch(e) {}
+  return null;
+}
+function setYahooCache(ticker, data) {
+  try {
+    const c = JSON.parse(localStorage.getItem('yahooCache') || '{}');
+    c[ticker] = { ...data, cachedAt: Date.now() };
+    localStorage.setItem('yahooCache', JSON.stringify(c));
+  } catch(e) {}
+}
+function clearYahooCache() {
+  localStorage.removeItem('yahooCache');
+}
+
+const PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+];
+
+async function fetchProxy(url) {
+  for(const proxy of PROXIES) {
+    try {
+      const r = await fetch(proxy(url), { signal: AbortSignal.timeout(12000) });
+      if(r.ok) return r;
+    } catch(e) { /* try next */ }
+  }
+  throw new Error('Sin conexión a Yahoo Finance');
+}
+
+async function fetchYahoo(ticker) {
+  const cached = getYahooCache(ticker);
+  if(cached) return cached;
+
+  const result = {
+    ticker, name: ticker, currentPrice: 0,
+    annualDivRate: 0, dividendYield: 0,
+    quarterlyPattern: [false,false,false,false],
+    paymentMonths: [], error: null
+  };
+
+  try {
+    // Summary: price + dividend rate
+    const summUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryDetail,price`;
+    const sR = await fetchProxy(summUrl);
+    const sJ = await sR.json();
+    const res = sJ?.quoteSummary?.result?.[0];
+
+    if(res?.price) {
+      result.currentPrice = res.price.regularMarketPrice?.raw || 0;
+      result.name = res.price.shortName || res.price.longName || ticker;
+    }
+    if(res?.summaryDetail) {
+      result.annualDivRate  = res.summaryDetail.trailingAnnualDividendRate?.raw || 0;
+      result.dividendYield  = (res.summaryDetail.trailingAnnualDividendYield?.raw || 0) * 100;
+    }
+
+    // Chart: dividend history for quarterly pattern
+    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=1y&interval=1mo&events=dividends`;
+    const cR = await fetchProxy(chartUrl);
+    const cJ = await cR.json();
+    const divs = cJ?.chart?.result?.[0]?.events?.dividends;
+
+    if(divs) {
+      const divArr = Object.values(divs);
+      const months = divArr.map(d => new Date(d.date * 1000).getMonth());
+      result.paymentMonths = [...new Set(months)].sort((a,b) => a-b);
+      const qp = [false,false,false,false];
+      months.forEach(m => { qp[Math.floor(m/3)] = true; });
+      result.quarterlyPattern = qp;
+
+      // Fallback: calculate annual rate from history if Yahoo didn't provide it
+      if(result.annualDivRate === 0 && divArr.length > 0) {
+        result.annualDivRate = divArr.reduce((s,d) => s + (d.amount||0), 0);
+        if(result.currentPrice > 0)
+          result.dividendYield = (result.annualDivRate / result.currentPrice) * 100;
+      }
+    }
+  } catch(e) {
+    result.error = e.message;
+  }
+
+  setYahooCache(ticker, result);
+  return result;
+}
+
+// ═══════════════════════════════════════════
+// FETCH ALL DATA
+// ═══════════════════════════════════════════
+async function fetchAllData(forceRefresh) {
+  const positions = getPositions();
+  if(positions.length === 0) {
+    S.data = { positions:[], summary: emptySummary() };
+    S.refreshing = false; render(); return;
+  }
+
+  if(forceRefresh) clearYahooCache();
+  S.refreshing = true; S.progress = 0; S.total = positions.length;
+  render();
+
+  const settled = await Promise.allSettled(
+    positions.map(async pos => {
+      const y = await fetchYahoo(pos.ticker);
+      S.progress++; renderProgress();
+      const shares  = parseFloat(pos.shares)  || 0;
+      const avgCost = parseFloat(pos.avgCost) || 0;
+      const adr     = y.annualDivRate || 0;
+      return {
+        ...pos, ...y, shares, avgCost,
+        annualIncome: adr * shares,
+        currentValue: (y.currentPrice||0) * shares,
+        totalCost:    avgCost * shares,
+        yieldPct:     y.dividendYield || 0,
+        yieldOnCost:  avgCost > 0 ? (adr / avgCost) * 100 : 0
+      };
+    })
+  );
+
+  const enriched = settled.map((r,i) =>
+    r.status === 'fulfilled' ? r.value :
+    { ...positions[i], annualIncome:0, currentValue:0, totalCost:0, yieldPct:0, yieldOnCost:0 }
+  );
+
+  enriched.sort((a,b) => (b.annualIncome||0) - (a.annualIncome||0));
+
+  const tot  = v => enriched.reduce((s,p) => s + (p[v]||0), 0);
+  const tai  = tot('annualIncome');
+  const tcv  = tot('currentValue');
+  const tc   = tot('totalCost');
+
+  S.data = {
+    positions: enriched,
+    summary: {
+      totalAnnualIncome: tai,
+      monthlyIncome: tai / 12,
+      dailyIncome:   tai / 365,
+      portfolioYield: tcv > 0 ? (tai/tcv)*100 : 0,
+      yieldOnCost:    tc  > 0 ? (tai/tc )*100 : 0,
+      totalCurrentValue: tcv, totalCost: tc
+    },
+    lastUpdated: new Date().toISOString()
+  };
+
+  localStorage.setItem('divCache', JSON.stringify(S.data));
+  S.refreshing = false; toast('✓ Datos actualizados');
+  render();
+}
+
+async function refreshData() {
+  await fetchAllData(false);
+}
+
+function emptySummary() {
+  return { totalAnnualIncome:0, monthlyIncome:0, dailyIncome:0,
+           portfolioYield:0, yieldOnCost:0, totalCurrentValue:0, totalCost:0 };
+}
+
+function renderProgress() {
+  const el = document.getElementById('progressFill');
+  if(el) el.style.width = Math.round((S.progress/S.total)*100) + '%';
+}
+
+// ═══════════════════════════════════════════
+// TAB
+// ═══════════════════════════════════════════
+function setTab(t) {
+  S.tab = t;
+  document.querySelectorAll('.tab-btn').forEach((b,i) =>
+    b.classList.toggle('active', ['dividends','portfolio','settings'][i] === t));
+  document.querySelectorAll('.ni').forEach((b,i) =>
+    b.classList.toggle('active', ['dividends','refresh','portfolio','settings'][i] === t));
+  render();
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render() {
+  const el = document.getElementById('main');
+  document.getElementById('fab').style.display =
+    ['dividends','portfolio'].includes(S.tab) ? 'flex' : 'none';
+  if(S.tab==='dividends') el.innerHTML = renderDivs();
+  else if(S.tab==='portfolio') el.innerHTML = renderPort();
+  else el.innerHTML = renderSettings();
+}
+
+// ── Dividends ──
+function renderDivs() {
+  if(S.refreshing && !S.data?.positions?.length)
+    return `<div class="loading-box"><div class="spinner"></div>
+      <span style="font-size:13px;color:var(--text2)">Obteniendo datos de Yahoo Finance…</span>
+      <div class="progress-bar" style="margin:0;width:200px"><div class="progress-fill" id="progressFill"></div></div>
+      <span style="font-size:11px;color:var(--text3)">${S.progress} / ${S.total} tickers</span>
+    </div>`;
+
+  if(!S.data?.positions?.length)
+    return `<div class="empty"><div class="empty-ico">💸</div>
+      <h2 class="empty-title">Sin posiciones</h2>
+      <p class="empty-desc">Pulsa <strong>+</strong> para agregar tus ETFs,<br>o usa "Cargar mis posiciones" en Ajustes.</p>
+    </div>`;
+
+  const { summary, positions } = S.data;
+  const monthly = getMonthlyData(positions, S.year);
+
+  return `
+    <div class="hero">
+      <div class="hero-top">
+        <div class="hero-amt"><sup>$</sup>${fmt(summary.totalAnnualIncome)}</div>
+        <button class="refresh-btn ${S.refreshing?'spin':''}" onclick="refreshData()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+      </div>
+      ${S.refreshing ? `<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:${Math.round((S.progress/S.total)*100)}%"></div></div>` : ''}
+      <div class="hero-grid">
+        <div class="hs"><span class="hs-l">Mensual</span><span class="hs-v ora">${fmtC(summary.monthlyIncome)}</span></div>
+        <div class="hs"><span class="hs-l">Diario</span><span class="hs-v ora">${fmtC(summary.dailyIncome)}</span></div>
+        <div class="hs"><span class="hs-l">Rendimiento</span><span class="hs-v">${p2(summary.portfolioYield)}%</span></div>
+        <div class="hs"><span class="hs-l">Rend. s/costo</span><span class="hs-v">${p2(summary.yieldOnCost)}%</span></div>
+      </div>
+    </div>
+
+    <div class="chart-sec">
+      <div class="chart-years">
+        ${[S.year,S.year-1,S.year-2,S.year-3].map(y =>
+          `<button class="ybtn ${y===S.year?'active':''}" onclick="S.year=${y};render()">
+            ${y===new Date().getFullYear()?'Anual':y}
+          </button>`).join('')}
+      </div>
+      ${barChart(monthly, S.year)}
+    </div>
+
+    <div class="sec-hdr">
+      <h2 class="sec-title">Acciones</h2>
+      <button class="sec-btn" onclick="cyclSort()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+          <line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="holdings">${positions.map(p => holdingRow(p)).join('')}</div>
+    ${S.data.lastUpdated ? `<div class="last-upd">Actualizado: ${new Date(S.data.lastUpdated).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}</div>` : ''}
+    <div class="divider"></div>`;
+}
+
+function holdingRow(p) {
+  const qp  = p.quarterlyPattern || [true,true,true,true];
+  const hd  = (p.annualDivRate||0) > 0;
+  const col = tColor(p.ticker);
+  return `
+    <div class="h-item" onclick="openEdit('${p.ticker}')">
+      <div class="h-logo" style="background:${col}18;color:${col}">${p.ticker.slice(0,3)}</div>
+      <div class="h-info">
+        <div class="h-name"><span class="h-ticker">${p.ticker}</span><span class="h-fname">${trunc(p.name||p.ticker,20)}</span></div>
+        <div class="h-meta">
+          <span class="h-shares">${p.shares}</span>
+          ${hd ? `<div class="q-wrap">
+            ${qp.map(q=>`<div class="q-bar ${q?'on':''}"></div>`).join('')}
+            <span class="q-lbl">Q1Q2Q3Q4</span>
+          </div>` : ''}
+        </div>
+      </div>
+      <div class="h-right">
+        ${hd
+          ? `<div class="h-income">${fmtC(p.annualIncome)}</div>
+             <div class="h-yields">${p2(p.yieldPct)}% (${p2(p.yieldOnCost)}%)</div>`
+          : `<div class="h-income nodiv">Sin dividendo</div>
+             <div class="h-yields">${p2(p.yieldPct)}% (${p2(p.yieldOnCost)}%)</div>`
+        }
+      </div>
+    </div>`;
+}
+
+// ── Portfolio ──
+function renderPort() {
+  if(!S.data?.positions?.length)
+    return `<div class="empty"><div class="empty-ico">📈</div>
+      <h2 class="empty-title">Sin datos</h2>
+      <p class="empty-desc">Agrega posiciones con el botón +.</p></div>`;
+
+  const { summary, positions } = S.data;
+  const pnl = summary.totalCurrentValue - summary.totalCost;
+  const pnlPct = summary.totalCost > 0 ? (pnl/summary.totalCost)*100 : 0;
+
+  return `
+    <div class="port-card">
+      <div class="port-total">${fmtC(summary.totalCurrentValue)}</div>
+      <div class="port-lbl">Valor actual del portafolio</div>
+      <div class="port-grid">
+        <div class="port-stat"><div class="port-stat-lbl">Costo total</div>
+          <div class="port-stat-val" style="font-size:15px">${fmtC(summary.totalCost)}</div></div>
+        <div class="port-stat"><div class="port-stat-lbl">Ganancia / Pérdida</div>
+          <div class="port-stat-val" style="font-size:15px;color:${pnl>=0?'var(--success)':'var(--danger)'}">
+            ${pnl>=0?'+':''}${fmtC(pnl)}</div></div>
+        <div class="port-stat"><div class="port-stat-lbl">Yield anual</div>
+          <div class="port-stat-val" style="color:var(--orange)">${p2(summary.portfolioYield)}%</div></div>
+        <div class="port-stat"><div class="port-stat-lbl">Yield s/costo</div>
+          <div class="port-stat-val" style="color:var(--orange)">${p2(summary.yieldOnCost)}%</div></div>
+      </div>
+    </div>
+
+    <div class="sec-hdr" style="padding-top:18px"><h2 class="sec-title">Posiciones</h2></div>
+    <div class="holdings">
+      ${positions.map(p => {
+        const cpnl    = p.currentValue - p.totalCost;
+        const cpnlPct = p.totalCost > 0 ? (cpnl/p.totalCost)*100 : 0;
+        const col     = tColor(p.ticker);
+        return `<div class="h-item" onclick="openEdit('${p.ticker}')">
+          <div class="h-logo" style="background:${col}18;color:${col}">${p.ticker.slice(0,3)}</div>
+          <div class="h-info">
+            <div class="h-name"><span class="h-ticker">${p.ticker}</span>
+              <span class="h-fname">${p.shares} acc · ${fmtC(p.currentPrice||0)}</span></div>
+            <div class="h-meta"><span class="h-shares">Costo: ${fmtC(p.avgCost||0)}</span></div>
+          </div>
+          <div class="h-right">
+            <div class="h-income">${fmtC(p.currentValue)}</div>
+            <div class="h-yields" style="color:${cpnl>=0?'var(--success)':'var(--danger)'}">
+              ${cpnl>=0?'+':''}${p2(cpnlPct)}%
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="divider"></div>`;
+}
+
+// ── Settings ──
+function renderSettings() {
+  const count = getPositions().length;
+  const lastUpd = S.data?.lastUpdated
+    ? new Date(S.data.lastUpdated).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})
+    : 'Nunca';
+  return `<div style="padding:12px 0">
+    <div class="sec-hdr"><h2 class="sec-title">Ajustes</h2></div>
+    <div class="settings-card">
+      <div class="s-item" onclick="fetchAllData(true)">
+        <div class="s-ico" style="background:#E8F5E9">🔄</div>
+        <div class="s-text"><div class="s-label">Actualizar todo</div>
+          <div class="s-val">Forzar recarga desde Yahoo Finance · ${lastUpd}</div></div>
+        <span class="chevron">›</span>
+      </div>
+      <div class="s-item" onclick="loadDefaults()">
+        <div class="s-ico" style="background:#FFF3E0">📋</div>
+        <div class="s-text"><div class="s-label">Cargar mis posiciones</div>
+          <div class="s-val">CHPY · GDXW · JEPI · JEPQ · JMOM · KQQQ · SCHD · SEMY · TDAQ · TSPY · WMTI…</div></div>
+        <span class="chevron">›</span>
+      </div>
+      <div class="s-item" onclick="exportData()">
+        <div class="s-ico" style="background:#E8F4FD">💾</div>
+        <div class="s-text"><div class="s-label">Exportar posiciones</div>
+          <div class="s-val">${count} posicion${count===1?'':'es'} guardadas en el dispositivo</div></div>
+        <span class="chevron">›</span>
+      </div>
+      <div class="s-item" onclick="clearAll()">
+        <div class="s-ico" style="background:#FFEBEE">🗑️</div>
+        <div class="s-text"><div class="s-label">Borrar todo</div>
+          <div class="s-val">Elimina posiciones y caché del dispositivo</div></div>
+        <span class="chevron">›</span>
+      </div>
+    </div>
+    <div style="background:var(--card);border-radius:var(--radius);margin:10px;padding:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Acerca de</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7">
+        📡 Datos via <strong>Yahoo Finance</strong> (proxy CORS)<br>
+        💾 Almacenamiento <strong>local en tu teléfono</strong><br>
+        🔄 Caché de <strong>6 horas</strong> por ticker<br>
+        📶 Funciona <strong>offline</strong> con datos en caché
+      </div>
+    </div>
+    <div style="text-align:center;padding:16px;color:var(--text3);font-size:11px">DivTracker v2.0</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// BAR CHART
+// ═══════════════════════════════════════════
+function barChart(monthly, year) {
+  const mths = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const max  = Math.max(...monthly, 0.01);
+  const W=320, H=110, bw=18, pad=8;
+  const step = (W - pad*2) / 12;
+  const now  = new Date(); const curM = now.getMonth(); const curY = now.getFullYear();
+
+  const bars = mths.map((m,i) => {
+    const bh   = Math.max((monthly[i]/max)*(H-26), 2);
+    const x    = pad + i*step + (step-bw)/2;
+    const y    = H-18-bh;
+    const past = year < curY || (year===curY && i <= curM);
+    return `<g>
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="5" fill="${past?'#FF9500':'#FFDEA0'}"/>
+      <text x="${(x+bw/2).toFixed(1)}" y="${H-2}" text-anchor="middle" font-size="7.5" fill="${(year===curY&&i===curM)?'#1C1C1E':'#AEAEB2'}" font-family="Plus Jakarta Sans,sans-serif">${m}</text>
+    </g>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${bars}</svg>`;
+}
+
+function getMonthlyData(positions, year) {
+  const monthly = new Array(12).fill(0);
+  const curYear = new Date().getFullYear();
+  positions.forEach(p => {
+    if(!p.annualIncome || p.annualIncome<=0) return;
+    let months = p.paymentMonths;
+    if(!months || months.length===0) {
+      const qp = p.quarterlyPattern || [true,true,true,true];
+      months = qp.flatMap((q,qi) => q?[qi*3,qi*3+1,qi*3+2]:[]);
+    }
+    if(months.length===0) months=[0,1,2,3,4,5,6,7,8,9,10,11];
+    const perM = p.annualIncome / months.length;
+    months.forEach(m => { monthly[m] += perM; });
+  });
+  return year < curYear ? monthly.map(v => v*0.85) : monthly;
+}
+
+// ═══════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════
+function openAdd() {
+  S.editTicker = null;
+  document.getElementById('modalTitle').textContent = 'Agregar posición';
+  document.getElementById('iTickr').value=''; document.getElementById('iTickr').disabled=false;
+  document.getElementById('iShrs').value=''; document.getElementById('iCost').value='';
+  document.getElementById('delBtn').style.display='none';
+  showModal();
+}
+function openEdit(t) {
+  S.editTicker = t;
+  const p = getPositions().find(x => x.ticker===t);
+  document.getElementById('modalTitle').textContent = 'Editar posición';
+  document.getElementById('iTickr').value=t; document.getElementById('iTickr').disabled=true;
+  document.getElementById('iShrs').value=p?.shares??'';
+  document.getElementById('iCost').value=p?.avgCost??'';
+  document.getElementById('delBtn').style.display='block';
+  showModal();
+}
+function showModal() {
+  const o = document.getElementById('posModal');
+  o.style.display='flex'; requestAnimationFrame(() => o.classList.add('open'));
+}
+function closeModal() {
+  const o = document.getElementById('posModal');
+  o.classList.remove('open'); setTimeout(()=>o.style.display='none',310);
+}
+document.getElementById('posModal').addEventListener('click', e => { if(e.target.id==='posModal') closeModal(); });
+
+async function doSave() {
+  const ticker = document.getElementById('iTickr').value.trim().toUpperCase();
+  const shares = parseFloat(document.getElementById('iShrs').value)||0;
+  const avgCost= parseFloat(document.getElementById('iCost').value)||0;
+  if(!ticker){ toast('Ingresa un ticker'); return; }
+  upsertPosition({ ticker, shares, avgCost });
+  closeModal(); toast('✓ Guardado — actualizando…');
+  await fetchAllData(false);
+}
+async function doDelete() {
+  if(!S.editTicker || !confirm(`¿Eliminar ${S.editTicker}?`)) return;
+  removePosition(S.editTicker);
+  closeModal(); toast('✓ Eliminado');
+  await fetchAllData(false);
+}
+
+// ═══════════════════════════════════════════
+// SETTINGS ACTIONS
+// ═══════════════════════════════════════════
+async function loadDefaults() {
+  if(!confirm('¿Cargar tus posiciones?\n(CHPY, GDXW, JEPI, JEPQ, JMOM, KQQQ, SCHD, SEMY, SOXL, SPXL, TDAQ, TDAX, TSPY, UPRO, WMTI)\n\nEdita las acciones y precio de costo después.')) return;
+  const defs = [
+    {ticker:'CHPY',shares:8,avgCost:0},{ticker:'GDXW',shares:4,avgCost:0},
+    {ticker:'JEPI',shares:12,avgCost:0},{ticker:'JEPQ',shares:10,avgCost:0},
+    {ticker:'JMOM',shares:12,avgCost:0},{ticker:'KQQQ',shares:8,avgCost:0},
+    {ticker:'SCHD',shares:30,avgCost:0},{ticker:'SEMY',shares:16,avgCost:0},
+    {ticker:'SOXL',shares:0,avgCost:0},{ticker:'SPXL',shares:0,avgCost:0},
+    {ticker:'TDAQ',shares:56,avgCost:0},{ticker:'TDAX',shares:0,avgCost:0},
+    {ticker:'TSPY',shares:42,avgCost:0},{ticker:'UPRO',shares:0,avgCost:0},
+    {ticker:'WMTI',shares:3,avgCost:0}
+  ];
+  savePositionsLS(defs);
+  toast('✓ Posiciones cargadas — obteniendo datos…');
+  setTab('dividends');
+  await fetchAllData(true);
+}
+function exportData() {
+  const data = { positions: getPositions(), exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'divtracker-posiciones.json';
+  a.click();
+  toast('✓ Archivo descargado');
+}
+function clearAll() {
+  if(!confirm('¿Borrar TODAS las posiciones y datos?')) return;
+  localStorage.removeItem('positions');
+  localStorage.removeItem('divCache');
+  localStorage.removeItem('yahooCache');
+  S.data = null; toast('Todo borrado'); render();
+}
+
+// ═══════════════════════════════════════════
+// SORT
+// ═══════════════════════════════════════════
+let sortDir = -1;
+function cyclSort() {
+  if(!S.data?.positions) return;
+  sortDir *= -1;
+  S.data.positions.sort((a,b) => sortDir * ((b.annualIncome||0) - (a.annualIncome||0)));
+  render();
+}
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function fmt(n){ if(!n||isNaN(n)) return '0.00'; return n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtC(n){ return '$'+fmt(n); }
+function p2(n){ if(!n||isNaN(n)) return '0.00'; return n.toFixed(2); }
+function trunc(s,l){ return s&&s.length>l?s.slice(0,l)+'…':(s||''); }
+
+const TC={CHPY:'#18181B',GDXW:'#4F46E5',JEPI:'#92400E',JEPQ:'#78350F',
+  JMOM:'#713F12',KQQQ:'#065F46',SCHD:'#0369A1',SEMY:'#047857',
+  SOXL:'#1D4ED8',SPXL:'#1E40AF',TDAQ:'#1C1C1E',TDAX:'#374151',
+  TSPY:'#111827',UPRO:'#15803D',WMTI:'#7C3AED',KSLV:'#374151'};
+
+function tColor(t){
+  if(TC[t]) return TC[t];
+  let h=0; for(const c of t) h=(h<<5)-h+c.charCodeAt(0);
+  return '#'+Math.abs(h%0xFFFFFF).toString(16).padStart(6,'0');
+}
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+render();
+const hasPositions = getPositions().length > 0;
+if(hasPositions && !S.data) fetchAllData(false);
+else if(hasPositions && S.data) setTimeout(()=>fetchAllData(false), 500);
+
+if('serviceWorker' in navigator)
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body>
+</html>
